@@ -1,0 +1,11 @@
+# Per-environment runtime state — never commit. Mirrors atelier's
+# deploy filter (atelier.js DEPLOY_FILTERS), so anything matching here is
+# also excluded from `npm run atelier -- install/update` rsyncs.
+data/
+
+# Defensive: even if a Vercel CLI command was run somewhere outside data/,
+# don't ship its credentials or project link.
+.vercel/
+.env
+.env.local
+.env.*.local

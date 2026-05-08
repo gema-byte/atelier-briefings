@@ -1,0 +1,7 @@
+{
+  "name": "Sample Itinerary",
+  "description": "A four-day studio-visit brief in Reykjavík — fictional people, fictional places. Duplicate this and edit data.js for your own trip.",
+  "kind": "template",
+  "entry": "itinerary.html",
+  "source": "Bundled sample"
+}
