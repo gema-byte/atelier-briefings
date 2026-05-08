@@ -284,28 +284,53 @@ function feedbackWidgetSnippet(scope, id) {
       nameEl = $('br-from'), msgEl = $('br-msg'), sendBtn = $('br-send'),
       statusEl = $('br-status'), closeBtn = $('br-close');
   var anchor = '';
-  // Stash whatever the reader has selected on the page. Required because
-  // the moment they click the FAB the document selection collapses, so by
-  // the time open() runs window.getSelection() is empty. selectionchange
-  // fires on every selection update, so we just keep the latest non-empty
-  // value around. We also call preventDefault on the FAB's mousedown so
-  // the button itself doesn't steal focus and clear the selection.
+  // Triple-redundant selection capture. Browsers vary in when they
+  // collapse the document selection on click, and some (Safari in
+  // particular) ignore mousedown.preventDefault for focus changes. So we
+  // catch the selection in three places, take whichever was most recent
+  // when open() runs:
+  //   • selectionchange — fires while the user drags
+  //   • mousedown/touchstart on body — fires the instant the FAB or any
+  //     other element is pressed, BEFORE the browser collapses anything
+  //   • the live read inside open() itself
   var lastSelection = '';
-  document.addEventListener('selectionchange', function () {
-    var s = String(window.getSelection() || '').replace(/\\s+/g, ' ').trim();
-    if (s.length > 1) lastSelection = s;
-  });
+  function snapshotSelection() {
+    try {
+      var s = String(window.getSelection() || '').replace(/\\s+/g, ' ').trim();
+      if (s.length > 1) lastSelection = s;
+    } catch (e) {}
+  }
+  document.addEventListener('selectionchange', snapshotSelection);
+  // capture-phase mousedown so we run BEFORE any handler that might
+  // collapse the selection (including the FAB's own preventDefault).
+  document.addEventListener('mousedown', snapshotSelection, true);
+  document.addEventListener('touchstart', snapshotSelection, true);
 
   function open() {
     panel.classList.add('open');
     var current = String(window.getSelection() || '').replace(/\\s+/g, ' ').trim();
     var sel = current.length > 1 ? current : lastSelection;
-    if (sel && sel.length > 1) { anchor = sel.slice(0, 240); anchorEl.textContent = '“' + anchor + '”'; anchorEl.style.display = 'block'; }
-    else { anchor = ''; anchorEl.style.display = 'none'; }
+    if (sel && sel.length > 1) {
+      anchor = sel.slice(0, 240);
+      anchorEl.textContent = '“' + anchor + '”';
+      anchorEl.style.display = 'block';
+    } else {
+      anchor = '';
+      anchorEl.textContent = 'Tip: select text on the page first to pin this note to a passage.';
+      anchorEl.style.display = 'block';
+      anchorEl.style.fontStyle = 'normal';
+      anchorEl.style.color = '#8a8474';
+    }
     statusEl.textContent = ''; statusEl.classList.remove('error');
     setTimeout(function () { msgEl.focus(); }, 50);
   }
-  function close() { panel.classList.remove('open'); lastSelection = ''; }
+  function close() {
+    panel.classList.remove('open');
+    lastSelection = '';
+    // restore default styling for the next open
+    anchorEl.style.fontStyle = '';
+    anchorEl.style.color = '';
+  }
   // preventDefault on mousedown stops the focus shift that would otherwise
   // collapse the user's text selection before the click handler runs.
   fab.addEventListener('mousedown', function (e) { e.preventDefault(); });
